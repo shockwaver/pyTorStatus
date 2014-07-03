@@ -1,0 +1,4 @@
+1. Add Timezone config to config file and update Tor.py __init__ to use it
+
+2. Spin message creation blocks to seperate function
+ 2.1 Adjust config parser to accomodate multiple relay IDs
