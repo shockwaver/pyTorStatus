@@ -4,10 +4,8 @@ import gnupg
 import smtplib
 from datetime import datetime
 from pytz import timezone
-import pytz
-from onion_py.manager import Manager
-from onion_py.caching import OnionSimpleCache
 from ConfigParser import SafeConfigParser
+from Tor import Tor
 
 configFile = 'config.cfg'
 
@@ -52,9 +50,16 @@ class PGP(object):
         signed_text = self.gpg.sign(message, keyid=self.signID, passphrase=self.passphrase)
         return signed_text
 
+
 # read config file in
 parser = SafeConfigParser()
 parser.read(configFile)
+
+# Check for debug flag
+DEBUG = False
+if parser.has_option('debug', 'debug'):
+    DEBUG = parser.getboolean('debug', 'debug')
+
 # parse email variables
 email = parser.get('email', 'email')
 password = parser.get('email', 'password')
@@ -70,9 +75,12 @@ recipient = parser.get('recipient', 'recipientEmail')
 
 # get tor relay
 torRelay = parser.get('tor', 'torFingerprint')
-torManager = Manager(OnionSimpleCache())
-tor = torManager.query('details', lookup=torRelay)
-relay = tor.relays[0]
+
+# Create Tor object
+tor = Tor(torRelay)
+relay = tor.relay()
+
+dateFormat = "%Y-%m-%d %H:%M:%S %Z"
 
 # build the message
 message = "Tor Relay (%s) Status\r\n" \
@@ -82,44 +90,49 @@ message = "Tor Relay (%s) Status\r\n" \
     "Hibernating: %s\r\n" \
     "Address: %s\r\n" \
     "Contact: %s\r\n" \
-    "Last Restarted: %s\r\n" % (relay.nickname, relay.fingerprint, relay.running, relay.hibernating, relay.dir_address,
-                                relay.contact, relay.last_restarted)
+    "Last Restarted: %s\r\n" \
+    "Uptime: %s\r\n" % (relay.nickname, relay.fingerprint, relay.running, relay.hibernating, relay.dir_address,
+                                relay.contact, tor.restartTimeLocal.strftime(dateFormat), tor.getUptime())
 
-# Bandwidth, rates are in Bytes/second so divide 1024 to get KB/s
-relayRate = relay.bandwidth[0]
-relayBurst = relay.bandwidth[1]
-relayObserved = relay.bandwidth[2]
-relayAdvertised = relay.bandwidth[3]
+if DEBUG:
+    print "First Block: \r\n%s\r\n" % message
 
-# It's possible for these to report None - compensate by setting to 0.00
-relayRate = 0.00 if str(relayRate) == "None" else float(relayRate)/1024
-relayBurst = 0.00 if str(relayBurst) == "None" else float(relayBurst)/1024
-relayObserved = 0.00 if str(relayObserved) == "None" else float(relayObserved)/1024
-relayAdvertised = 0.00 if str(relayAdvertised) == "None" else float(relayAdvertised)/1024
-
-
-message += "\r\n" \
+bandwidthBlock = "\r\n" \
     "Bandwidth:\r\n" \
     "         Rate: %0.2fKB/s\r\n" \
     "        Burst: %0.2fKB/s\r\n" \
     "     Observed: %0.2fKB/s\r\n" \
-    "   Advertised: %0.2fKB/s\r\n" % (relayRate, relayBurst, relayObserved, relayAdvertised)
+    "   Advertised: %0.2fKB/s\r\n" % (tor.relayRate, tor.relayBurst, tor.relayObserved, tor.relayAdvertised)
+
+bandwidthBlock += "\r\n" \
+    "Read/Write Speeds: \r\n" \
+    "     3 Day Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
+    "    1 Week Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
+    "   1 Month Avg: %0.2fKB/s, %0.2fKB/s\r\n" % (tor.threeDayAvgRead, tor.threeDayAvgWrite, tor.oneWeekAvgRead,
+                                                  tor.oneWeekAvgWrite, tor.oneMonthAvgRead, tor.oneMonthAvgWrite)
+if DEBUG:
+    print "Bandwidth block: %s" % bandwidthBlock
+message += bandwidthBlock
 
 # Convert datetime string to localized CDT
-dateFormat = "%Y-%m-%d %H:%M:%S %Z"
 dateNow = datetime.now(timezone('US/Central'))
-relayUpdatedStr = str(tor.relays_published)
-updated_datetime_obj = datetime.strptime(relayUpdatedStr, "%Y-%m-%d %H:%M:%S")
-updated_datetime_obj = pytz.utc.localize(updated_datetime_obj)
-relayUpdated = timezone('US/Central').normalize(updated_datetime_obj)
+
 message += "\r\n" \
     "Last Updated: %s\r\n" \
-    "    Time Now: %s\r\n" % (relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
-#print message
+    "    Time Now: %s\r\n" % (tor.relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
+if DEBUG:
+    print "\r\n====================\r\n"
+    print "FULL MESSAGE\r\n"
+    print "====================\r\n"
+    print message
 
 
-# build mail object
-mail = Gmail(email, password, server, port)
 encrypted_message = cipher.encrypt(message, recipient)
-print encrypted_message
-mail.send_message(recipient, "Status Updated - %s" % dateNow.strftime("%Y-%m-%d %H:%M"), str(encrypted_message))
+if DEBUG:
+    print "Encrypted message:\r\n"
+    print encrypted_message
+
+if not DEBUG:
+    # build mail object
+    mail = Gmail(email, password, server, port)
+    mail.send_message(recipient, "Status Updated - %s" % dateNow.strftime("%Y-%m-%d %H:%M"), str(encrypted_message))

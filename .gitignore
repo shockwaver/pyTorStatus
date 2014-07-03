@@ -6,6 +6,9 @@ ehthumbs.db
 Desktop.ini
 config.cfg
 
+# compiled files
+*.pyc
+
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
