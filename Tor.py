@@ -30,7 +30,6 @@ class Tor(object):
 
     def getBandwidthTotals(self):
         write_histories = self.bandwidth.write_history
-        print write_histories
         total_written_bytes = 0
         for x, write_history in write_histories.iteritems():
             max_written_bytes_relay = 0
