@@ -97,12 +97,26 @@ message = "Tor Relay (%s) Status\r\n" \
 if DEBUG:
     print "First Block: \r\n%s\r\n" % message
 
+flagString = ""
+for flag in relay.flags:
+    flag = str(flag)
+    if flag == "Guard" or flag == "Stable":
+        flag = "*" + flag + "*"
+    flagString += flag + "\r\n"
+
+message += "\r\nCurrent Flags:\r\n" \
+    "%s" % flagString
+
+if DEBUG:
+    print "Flag string: %s" % flagString
+
 bandwidthBlock = "\r\n" \
     "Bandwidth:\r\n" \
-    "         Rate: %0.2fKB/s\r\n" \
-    "        Burst: %0.2fKB/s\r\n" \
-    "     Observed: %0.2fKB/s\r\n" \
-    "   Advertised: %0.2fKB/s\r\n" % (tor.relayRate, tor.relayBurst, tor.relayObserved, tor.relayAdvertised)
+    "         Rate: {:>8,.2f} KB/s\r\n" \
+    "        Burst: {:>8,.2f} KB/s\r\n" \
+    "     Observed: {:>8,.2f} KB/s\r\n" \
+    "   Advertised: {:>8,.2f} KB/s\r\n".format(tor.relayRate, tor.relayBurst, tor.relayObserved, tor.relayAdvertised)
+bandwidthBlock += "Total Network Bandwidth (est): %0.2fGB/s\r\n" % tor.networkBandwidth
 
 bandwidthBlock += "\r\n" \
     "Read/Write Speeds: \r\n" \
@@ -110,6 +124,12 @@ bandwidthBlock += "\r\n" \
     "    1 Week Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
     "   1 Month Avg: %0.2fKB/s, %0.2fKB/s\r\n" % (tor.threeDayAvgRead, tor.threeDayAvgWrite, tor.oneWeekAvgRead,
                                                   tor.oneWeekAvgWrite, tor.oneMonthAvgRead, tor.oneMonthAvgWrite)
+
+
+bandwidthBlock += "Total Bytes: \r\n" \
+    "   Write: {:>15,}\r\n" \
+    "    Read: {:>15,}\r\n".format(tor.total_written_bytes, tor.total_read_bytes)
+
 if DEBUG:
     print "Bandwidth block: %s" % bandwidthBlock
 message += bandwidthBlock
