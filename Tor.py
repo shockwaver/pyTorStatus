@@ -1,6 +1,7 @@
 __author__ = 'taylorc8'
 
 from pytz import timezone
+import logging
 import pytz
 from datetime import datetime
 from datetime import timedelta
@@ -24,6 +25,8 @@ class Tor(object):
         self.getWriteSpeed()
         self.getNetworkBandwidth()
         self.getBandwidthTotals()
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Tor object instantiated.")
 
     def relay(self):
         return self.tor.relays[0]

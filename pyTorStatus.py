@@ -1,7 +1,8 @@
 __author__ = 'shockwaver'
 
-import gnupg
 import smtplib
+import logging
+import argparse
 from datetime import datetime
 from pytz import timezone
 from configparser import SafeConfigParser
@@ -60,15 +61,44 @@ DEBUG = False
 if parser.has_option('debug', 'debug'):
     DEBUG = parser.getboolean('debug', 'debug')
 
+#################
+# Logging Setup #
+#################
+validLogLevels = ('ERROR', 'DEBUG', 'INFO', 'NOTSET')
+# check for logging flag from config file
+if parser.has_option('debug', 'loglevel'):
+    loglevel = parser.get('debug', 'loglevel').upper()
+    if loglevel not in validLogLevels:
+        loglevel = 'NOTSET'
+else:
+    loglevel = 'NOTSET'
+# check for command args
+argParser = argparse.ArgumentParser(description='Get detailed information from node in config.cfg file and email PGP '
+                                             'encrypted summary to email')
+argParser.add_argument("--logging", default='NOTSET', choices=['ERROR', 'error', 'debug', 'DEBUG', 'INFO', 'info'],
+                  metavar="ERROR|DEBUG", help='Set logging to ERROR or DEBUG level. Default is no logging.')
+args = argParser.parse_args()
+
+# if we passed an arg in, use that instead of the config file
+if args.logging.upper() is not "NOTSET":
+    loglevel = args.logging
+numeric_level = getattr(logging, loglevel.upper(), None)
+if not isinstance(numeric_level, int):
+    raise ValueError('Invalid log level: %s' % loglevel)
+logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logging.info("Logging level set to: %s" % loglevel)
+
 ###############
 # GPG Section #
 ###############
-
-# parse PGP variables
-signKey = parser.get('pgp key', 'sign_id')
-signPass = parser.get('pgp key', 'sign_pass')
-cipher = PGP(signKey, signPass, DEBUG)
-
+if not DEBUG:
+    logging.info("Entering GnuPGP phase.")
+    import gnupg
+    # parse PGP variables
+    signKey = parser.get('pgp key', 'sign_id')
+    signPass = parser.get('pgp key', 'sign_pass')
+    cipher = PGP(signKey, signPass, DEBUG)
 
 # parse email variables
 email = parser.get('email', 'email')
@@ -100,8 +130,8 @@ message = "Tor Relay (%s) Status\r\n" \
     "Uptime: %s\r\n" % (relay.nickname, relay.fingerprint, relay.running, relay.hibernating, relay.dir_address,
                                 relay.contact, tor.restartTimeLocal.strftime(dateFormat), tor.getUptime())
 
-if DEBUG:
-    print("First Block: \r\n%s\r\n" % message)
+logging.info("First block built.")
+logging.debug("First Block: \r\n%s\r\n" % message)
 
 flagString = ""
 for flag in relay.flags:
@@ -113,8 +143,8 @@ for flag in relay.flags:
 message += "\r\nCurrent Flags:\r\n" \
     "%s" % flagString
 
-if DEBUG:
-    print("Flag string: %s" % flagString)
+logging.info("Flags block built")
+logging.debug("Flag string: %s" % flagString)
 
 bandwidthBlock = "\r\n" \
     "Bandwidth:\r\n" \
@@ -159,8 +189,8 @@ bandwidthBlock += "Total Data (previous 30 days): \r\n" \
     "    Read: {readAmount:>6,.3f} {byteLabel}\r\n".format(writtenAmount=writtenAmount, readAmount=readAmount,
                                                            byteLabel=byteLabel)
 
-if DEBUG:
-    print("Bandwidth block: %s" % bandwidthBlock)
+logging.info("Bandwidth block built")
+logging.debug("Bandwidth block: %s" % bandwidthBlock)
 message += bandwidthBlock
 
 # Convert datetime string to localized CDT
@@ -169,19 +199,23 @@ dateNow = datetime.now(timezone('US/Central'))
 message += "\r\n" \
     "Last Updated: %s\r\n" \
     "    Time Now: %s\r\n" % (tor.relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
-if DEBUG:
-    print("\r\n====================\r\n")
-    print("FULL MESSAGE\r\n")
-    print("====================\r\n")
-    print(message)
+
+logging.info("Message complete.")
+logging.debug("\r\n====================\r\n"
+              "FULL MESSAGE\r\n"
+              "====================\r\n %s" % message)
 
 
-encrypted_message = cipher.encrypt(message, recipient)
-if DEBUG:
-    print("Encrypted message:\r\n")
-    print(encrypted_message)
+
 
 if not DEBUG:
+    # Build encrypted message
+    logging.info("Encrypting message.")
+    encrypted_message = cipher.encrypt(message, recipient)
+    logging.info("Encryption complete.")
+    logging.debug("Encrypted message:\r\n")
+    logging.debug(encrypted_message)
     # build mail object
     mail = Gmail(email, password, server, port)
     mail.send_message(recipient, "Status Updated - %s" % dateNow.strftime("%Y-%m-%d %H:%M"), str(encrypted_message))
+    logging.info("Mail sent")
