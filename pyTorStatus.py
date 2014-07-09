@@ -1,3 +1,5 @@
+from lib.Tor import Tor
+
 __author__ = 'shockwaver'
 
 import smtplib
@@ -6,19 +8,19 @@ import argparse
 from datetime import datetime
 from pytz import timezone
 from configparser import SafeConfigParser
-from Tor import Tor
 
 # check for command args
 argParser = argparse.ArgumentParser(description='Get detailed information from node in config.cfg file and email PGP '
-                                             'encrypted summary to email')
+                                                'encrypted summary to email')
 argParser.add_argument("--logging", default='NOTSET', choices=['ERROR', 'error', 'debug', 'DEBUG', 'INFO', 'info'],
-                  metavar="ERROR|DEBUG", help='Set logging to ERROR or DEBUG level. Default is no logging.')
+                       metavar="ERROR|DEBUG", help='Set logging to ERROR or DEBUG level. Default is no logging.')
 argParser.add_argument('-d', '--debug', action='store_true', help='Enabled debug mode. Script will not encrypt '
                                                                   'or email the message. More useful with '
                                                                   '--logging=DEBUG')
 args = argParser.parse_args()
 
 configFile = 'config.cfg'
+
 
 class Gmail(object):
     def __init__(self, email, password, server, port):
@@ -36,16 +38,17 @@ class Gmail(object):
     def send_message(self, email, subject, body):
         ''' This must be removed '''
         headers = [
-                "From: " + self.email,
-                "Subject: " + subject,
-                "To: " + email,
-                "MIME-Version: 1.0",
-                "Content-Type: text/plain"]
+            "From: " + self.email,
+            "Subject: " + subject,
+            "To: " + email,
+            "MIME-Version: 1.0",
+            "Content-Type: text/plain"]
         headers = "\r\n".join(headers)
         self.session.sendmail(
-                self.email,
-                email,
-                headers + "\r\n\r\n" + body)
+            self.email,
+            email,
+            headers + "\r\n\r\n" + body)
+
 
 class PGP(object):
     def __init__(self, signID, passphrase, debug):
@@ -118,7 +121,6 @@ password = parser.get('email', 'password')
 server = parser.get('email', 'server')
 port = parser.get('email', 'port')
 
-
 recipient = parser.get('recipient', 'recipientEmail')
 
 # get tor relay
@@ -132,15 +134,15 @@ dateFormat = "%Y-%m-%d %H:%M:%S %Z"
 
 # build the message
 message = "Tor Relay (%s) Status\r\n" \
-    "-----------------------------------\r\n" \
-    "Fingerprint: %s\r\n" \
-    "Running: %s\r\n" \
-    "Hibernating: %s\r\n" \
-    "Address: %s\r\n" \
-    "Contact: %s\r\n" \
-    "Last Restarted: %s\r\n" \
-    "Uptime: %s\r\n" % (relay.nickname, relay.fingerprint, relay.running, relay.hibernating, relay.dir_address,
-                                relay.contact, tor.restartTimeLocal.strftime(dateFormat), tor.getUptime())
+          "-----------------------------------\r\n" \
+          "Fingerprint: %s\r\n" \
+          "Running: %s\r\n" \
+          "Hibernating: %s\r\n" \
+          "Address: %s\r\n" \
+          "Contact: %s\r\n" \
+          "Last Restarted: %s\r\n" \
+          "Uptime: %s\r\n" % (relay.nickname, relay.fingerprint, relay.running, relay.hibernating, relay.dir_address,
+                              relay.contact, tor.restartTimeLocal.strftime(dateFormat), tor.getUptime())
 
 logging.info("First block built.")
 logging.debug("First Block: \r\n%s\r\n" % message)
@@ -153,31 +155,33 @@ for flag in relay.flags:
     flagString += flag + "\r\n"
 
 message += "\r\nCurrent Flags:\r\n" \
-    "%s" % flagString
+           "%s" % flagString
 
 logging.info("Flags block built")
 logging.debug("Flag string: %s" % flagString)
 
 bandwidthBlock = "\r\n" \
-    "Bandwidth:\r\n" \
-    "         Rate: {:>8,.2f} KB/s\r\n" \
-    "        Burst: {:>8,.2f} KB/s\r\n" \
-    "     Observed: {:>8,.2f} KB/s\r\n" \
-    "   Advertised: {:>8,.2f} KB/s\r\n".format(tor.relayRate, tor.relayBurst, tor.relayObserved, tor.relayAdvertised)
+                 "Bandwidth:\r\n" \
+                 "         Rate: {:>8,.2f} KB/s\r\n" \
+                 "        Burst: {:>8,.2f} KB/s\r\n" \
+                 "     Observed: {:>8,.2f} KB/s\r\n" \
+                 "   Advertised: {:>8,.2f} KB/s\r\n".format(tor.relayRate, tor.relayBurst, tor.relayObserved,
+                                                            tor.relayAdvertised)
 bandwidthBlock += "Total Network Bandwidth (est): %0.2fGB/s\r\n" % tor.networkBandwidth
 
 bandwidthBlock += "\r\n" \
-    "Read/Write Speeds: \r\n" \
-    "     3 Day Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
-    "    1 Week Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
-    "   1 Month Avg: %0.2fKB/s, %0.2fKB/s\r\n" % (tor.threeDayAvgRead, tor.threeDayAvgWrite, tor.oneWeekAvgRead,
-                                                  tor.oneWeekAvgWrite, tor.oneMonthAvgRead, tor.oneMonthAvgWrite)
+                  "Read/Write Speeds: \r\n" \
+                  "     3 Day Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
+                  "    1 Week Avg: %0.2fKB/s, %0.2fKB/s\r\n" \
+                  "   1 Month Avg: %0.2fKB/s, %0.2fKB/s\r\n" % (
+                  tor.threeDayAvgRead, tor.threeDayAvgWrite, tor.oneWeekAvgRead,
+                  tor.oneWeekAvgWrite, tor.oneMonthAvgRead, tor.oneMonthAvgWrite)
 
 
 # Calculate B/KB/MB/GB
 KB = 1024
-MB = KB*KB
-GB = MB*KB
+MB = KB * KB
+GB = MB * KB
 if tor.total_written_bytes > GB or tor.total_read_bytes > GB:
     writtenAmount = tor.total_written_bytes / GB
     readAmount = tor.total_read_bytes / GB
@@ -195,11 +199,11 @@ else:
     readAmount = tor.total_read_bytes
     byteLabel = "B"
 
-
 bandwidthBlock += "Total Data (previous 30 days): \r\n" \
-    "   Write: {writtenAmount:>6,.3f} {byteLabel}\r\n" \
-    "    Read: {readAmount:>6,.3f} {byteLabel}\r\n".format(writtenAmount=writtenAmount, readAmount=readAmount,
-                                                           byteLabel=byteLabel)
+                  "   Write: {writtenAmount:>6,.3f} {byteLabel}\r\n" \
+                  "    Read: {readAmount:>6,.3f} {byteLabel}\r\n".format(writtenAmount=writtenAmount,
+                                                                         readAmount=readAmount,
+                                                                         byteLabel=byteLabel)
 
 logging.info("Bandwidth block built")
 logging.debug("Bandwidth block: %s" % bandwidthBlock)
@@ -209,8 +213,8 @@ message += bandwidthBlock
 dateNow = datetime.now(timezone('US/Central'))
 
 message += "\r\n" \
-    "Last Updated: %s\r\n" \
-    "    Time Now: %s\r\n" % (tor.relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
+           "Last Updated: %s\r\n" \
+           "    Time Now: %s\r\n" % (tor.relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
 
 logging.info("Message complete.")
 
