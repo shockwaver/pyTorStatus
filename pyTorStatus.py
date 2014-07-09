@@ -4,7 +4,7 @@ import gnupg
 import smtplib
 from datetime import datetime
 from pytz import timezone
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from Tor import Tor
 
 configFile = 'config.cfg'
@@ -37,10 +37,10 @@ class Gmail(object):
                 headers + "\r\n\r\n" + body)
 
 class PGP(object):
-    def __init__(self, signID, passphrase):
+    def __init__(self, signID, passphrase, debug):
         self.signID = signID
         self.passphrase = passphrase
-        self.gpg = gnupg.GPG()
+        self.gpg = gnupg.GPG(verbose=debug)
 
     def encrypt(self, message, recipientEmail):
         encrypted_text = self.gpg.encrypt(message, recipientEmail, sign=self.signID, passphrase=self.passphrase)
@@ -60,16 +60,22 @@ DEBUG = False
 if parser.has_option('debug', 'debug'):
     DEBUG = parser.getboolean('debug', 'debug')
 
+###############
+# GPG Section #
+###############
+
+# parse PGP variables
+signKey = parser.get('pgp key', 'sign_id')
+signPass = parser.get('pgp key', 'sign_pass')
+cipher = PGP(signKey, signPass, DEBUG)
+
+
 # parse email variables
 email = parser.get('email', 'email')
 password = parser.get('email', 'password')
 server = parser.get('email', 'server')
 port = parser.get('email', 'port')
 
-# parse PGP variables
-signKey = parser.get('pgp key', 'sign_id')
-signPass = parser.get('pgp key', 'sign_pass')
-cipher = PGP(signKey, signPass)
 
 recipient = parser.get('recipient', 'recipientEmail')
 
@@ -95,7 +101,7 @@ message = "Tor Relay (%s) Status\r\n" \
                                 relay.contact, tor.restartTimeLocal.strftime(dateFormat), tor.getUptime())
 
 if DEBUG:
-    print "First Block: \r\n%s\r\n" % message
+    print("First Block: \r\n%s\r\n" % message)
 
 flagString = ""
 for flag in relay.flags:
@@ -108,7 +114,7 @@ message += "\r\nCurrent Flags:\r\n" \
     "%s" % flagString
 
 if DEBUG:
-    print "Flag string: %s" % flagString
+    print("Flag string: %s" % flagString)
 
 bandwidthBlock = "\r\n" \
     "Bandwidth:\r\n" \
@@ -126,12 +132,35 @@ bandwidthBlock += "\r\n" \
                                                   tor.oneWeekAvgWrite, tor.oneMonthAvgRead, tor.oneMonthAvgWrite)
 
 
-bandwidthBlock += "Total Bytes: \r\n" \
-    "   Write: {:>15,}\r\n" \
-    "    Read: {:>15,}\r\n".format(tor.total_written_bytes, tor.total_read_bytes)
+# Calculate B/KB/MB/GB
+KB = 1024
+MB = KB*KB
+GB = MB*KB
+if tor.total_written_bytes > GB or tor.total_read_bytes > GB:
+    writtenAmount = tor.total_written_bytes / GB
+    readAmount = tor.total_read_bytes / GB
+    byteLabel = "GB"
+elif tor.total_written_bytes > MB or tor.total_read_bytes > MB:
+    writtenAmount = tor.total_written_bytes / MB
+    readAmount = tor.total_read_bytes / MB
+    byteLabel = "MB"
+elif tor.total_written_bytes > KB or tor.total_read_bytes > KB:
+    writtenAmount = tor.total_written_bytes / KB
+    readAmount = tor.total_read_bytes / KB
+    byteLabel = "KB"
+else:
+    writtenAmount = tor.total_written_bytes
+    readAmount = tor.total_read_bytes
+    byteLabel = "B"
+
+
+bandwidthBlock += "Total Data (previous 30 days): \r\n" \
+    "   Write: {writtenAmount:>6,.3f} {byteLabel}\r\n" \
+    "    Read: {readAmount:>6,.3f} {byteLabel}\r\n".format(writtenAmount=writtenAmount, readAmount=readAmount,
+                                                           byteLabel=byteLabel)
 
 if DEBUG:
-    print "Bandwidth block: %s" % bandwidthBlock
+    print("Bandwidth block: %s" % bandwidthBlock)
 message += bandwidthBlock
 
 # Convert datetime string to localized CDT
@@ -141,16 +170,16 @@ message += "\r\n" \
     "Last Updated: %s\r\n" \
     "    Time Now: %s\r\n" % (tor.relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
 if DEBUG:
-    print "\r\n====================\r\n"
-    print "FULL MESSAGE\r\n"
-    print "====================\r\n"
-    print message
+    print("\r\n====================\r\n")
+    print("FULL MESSAGE\r\n")
+    print("====================\r\n")
+    print(message)
 
 
 encrypted_message = cipher.encrypt(message, recipient)
 if DEBUG:
-    print "Encrypted message:\r\n"
-    print encrypted_message
+    print("Encrypted message:\r\n")
+    print(encrypted_message)
 
 if not DEBUG:
     # build mail object

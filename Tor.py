@@ -31,8 +31,9 @@ class Tor(object):
     def getBandwidthTotals(self):
         write_histories = self.bandwidth.write_history
         total_written_bytes = 0
-        for x, write_history in write_histories.iteritems():
-            max_written_bytes_relay = 0
+
+        max_written_bytes_relay = 0
+        for x, write_history in write_histories.items():
             total = 0
             current = datetime.strptime(write_history.first,
                                         '%Y-%m-%d %H:%M:%S')
@@ -45,13 +46,14 @@ class Tor(object):
             total = int(total * write_history.interval * write_history.factor)
             if total > max_written_bytes_relay:
                 max_written_bytes_relay = total
-            total_written_bytes += max_written_bytes_relay
-        self.total_written_bytes = total_written_bytes / 8
+
+        self.total_written_bytes = max_written_bytes_relay
 
         read_histories = self.bandwidth.read_history
         total_read_bytes = 0
-        for x, read_history in read_histories.iteritems():
-            max_read_bytes_relay = 0
+
+        max_read_bytes_relay = 0
+        for x, read_history in read_histories.items():
             total = 0
             current = datetime.strptime(read_history.first,
                                         '%Y-%m-%d %H:%M:%S')
@@ -64,9 +66,7 @@ class Tor(object):
             total = int(total * read_history.interval * read_history.factor)
             if total > max_read_bytes_relay:
                 max_read_bytes_relay = total
-            total_read_bytes += max_read_bytes_relay
-        self.total_read_bytes = total_read_bytes / 8
-
+        self.total_read_bytes = max_read_bytes_relay
 
     def getBandwidthSpeeds(self):
         # Bandwidth, rates are in Bytes/second so divide self.byteConversion to get KB/s
