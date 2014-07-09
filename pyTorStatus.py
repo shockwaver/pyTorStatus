@@ -8,6 +8,16 @@ from pytz import timezone
 from configparser import SafeConfigParser
 from Tor import Tor
 
+# check for command args
+argParser = argparse.ArgumentParser(description='Get detailed information from node in config.cfg file and email PGP '
+                                             'encrypted summary to email')
+argParser.add_argument("--logging", default='NOTSET', choices=['ERROR', 'error', 'debug', 'DEBUG', 'INFO', 'info'],
+                  metavar="ERROR|DEBUG", help='Set logging to ERROR or DEBUG level. Default is no logging.')
+argParser.add_argument('-d', '--debug', action='store_true', help='Enabled debug mode. Script will not encrypt '
+                                                                  'or email the message. More useful with '
+                                                                  '--logging=DEBUG')
+args = argParser.parse_args()
+
 configFile = 'config.cfg'
 
 class Gmail(object):
@@ -61,6 +71,10 @@ DEBUG = False
 if parser.has_option('debug', 'debug'):
     DEBUG = parser.getboolean('debug', 'debug')
 
+# Ignore config.cfg file if --debug flag is present in args
+if args.debug is True:
+    DEBUG = True
+
 #################
 # Logging Setup #
 #################
@@ -72,12 +86,6 @@ if parser.has_option('debug', 'loglevel'):
         loglevel = 'NOTSET'
 else:
     loglevel = 'NOTSET'
-# check for command args
-argParser = argparse.ArgumentParser(description='Get detailed information from node in config.cfg file and email PGP '
-                                             'encrypted summary to email')
-argParser.add_argument("--logging", default='NOTSET', choices=['ERROR', 'error', 'debug', 'DEBUG', 'INFO', 'info'],
-                  metavar="ERROR|DEBUG", help='Set logging to ERROR or DEBUG level. Default is no logging.')
-args = argParser.parse_args()
 
 # if we passed an arg in, use that instead of the config file
 if args.logging.upper() is not "NOTSET":
@@ -88,6 +96,10 @@ if not isinstance(numeric_level, int):
 logging.basicConfig(level=numeric_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 logging.info("Logging level set to: %s" % loglevel)
+
+if DEBUG:
+    logging.info("Running in debug mode.")
+    print("Debug mode active. No encryption or emails are generated.")
 
 ###############
 # GPG Section #
@@ -201,21 +213,15 @@ message += "\r\n" \
     "    Time Now: %s\r\n" % (tor.relayUpdated.strftime(dateFormat), dateNow.strftime(dateFormat))
 
 logging.info("Message complete.")
-logging.debug("\r\n====================\r\n"
-              "FULL MESSAGE\r\n"
-              "====================\r\n %s" % message)
-
-
-
 
 if not DEBUG:
     # Build encrypted message
     logging.info("Encrypting message.")
     encrypted_message = cipher.encrypt(message, recipient)
     logging.info("Encryption complete.")
-    logging.debug("Encrypted message:\r\n")
-    logging.debug(encrypted_message)
+    logging.debug("Encrypted message:\r\n", encrypted_message)
     # build mail object
     mail = Gmail(email, password, server, port)
+    logging.info("Sending mail.")
     mail.send_message(recipient, "Status Updated - %s" % dateNow.strftime("%Y-%m-%d %H:%M"), str(encrypted_message))
-    logging.info("Mail sent")
+    logging.info("Mail sent.")
