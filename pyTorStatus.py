@@ -12,7 +12,7 @@ from configparser import SafeConfigParser
 # check for command args
 argParser = argparse.ArgumentParser(description='Get detailed information from node in config.cfg file and email PGP '
                                                 'encrypted summary to email')
-argParser.add_argument("--logging", default='NOTSET', choices=['ERROR', 'error', 'debug', 'DEBUG', 'INFO', 'info'],
+argParser.add_argument("--logging", default='ERROR', choices=['ERROR', 'error', 'debug', 'DEBUG', 'INFO', 'info'],
                        metavar="ERROR|DEBUG", help='Set logging to ERROR or DEBUG level. Default is no logging.')
 argParser.add_argument('-d', '--debug', action='store_true', help='Enabled debug mode. Script will not encrypt '
                                                                   'or email the message. More useful with '
