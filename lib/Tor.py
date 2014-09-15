@@ -22,8 +22,8 @@ class Tor(object):
         self.restartTimeLocal = self.convertToLocal(self.restartTime)
         self.getBandwidthSpeeds()
         self.lastUpdated()
-        self.getReadSpeed()
         self.getWriteSpeed()
+        self.getReadSpeed()
         self.getNetworkBandwidth()
         self.getBandwidthTotals()
         self.logger = logging.getLogger(__name__)
@@ -117,27 +117,36 @@ class Tor(object):
         oneMonthAvg = 0
 
         # Three Days
-        for value in writeSpeeds['3_days'].values:
-            value = 0.0 if str(value) == "None" else value
-            threeDayAvg += value
-        # avg speed by adding all values, multiplying by the factor and dividing by count
-        self.threeDayAvgWrite = (threeDayAvg * writeSpeeds['3_days'].factor) / writeSpeeds[
+        if '3_days' not in writeSpeeds:
+            self.threeDayAvgWrite = 0.0
+        else:
+            for value in writeSpeeds['3_days'].values:
+                value = 0.0 if str(value) == "None" else value
+                threeDayAvg += value
+            # avg speed by adding all values, multiplying by the factor and dividing by count
+            self.threeDayAvgWrite = (threeDayAvg * writeSpeeds['3_days'].factor) / writeSpeeds[
             '3_days'].count / self.byteConversion
 
         # One Week
-        for value in writeSpeeds['1_week'].values:
-            value = 0.0 if str(value) == "None" else value
-            oneWeekAvg += value
-        # avg speed by adding all values, multiplying by the factor and dividing by count
-        self.oneWeekAvgWrite = (oneWeekAvg * writeSpeeds['1_week'].factor) / writeSpeeds[
+        if '1_week' not in writeSpeeds:
+            self.oneWeekAvgWrite = 0.0
+        else:
+            for value in writeSpeeds['1_week'].values:
+                value = 0.0 if str(value) == "None" else value
+                oneWeekAvg += value
+            # avg speed by adding all values, multiplying by the factor and dividing by count
+            self.oneWeekAvgWrite = (oneWeekAvg * writeSpeeds['1_week'].factor) / writeSpeeds[
             '1_week'].count / self.byteConversion
 
         # One Month
-        for value in writeSpeeds['1_month'].values:
-            value = 0.0 if str(value) == "None" else value
-            oneMonthAvg += value
-        # avg speed by adding all values, multiplying by the factor and dividing by count
-        self.oneMonthAvgWrite = (oneMonthAvg * writeSpeeds['1_month'].factor) / writeSpeeds[
+        if '1_month' not in writeSpeeds:
+            self.oneMonthAvgWrite = 0.0
+        else:
+            for value in writeSpeeds['1_month'].values:
+                value = 0.0 if str(value) == "None" else value
+                oneMonthAvg += value
+            # avg speed by adding all values, multiplying by the factor and dividing by count
+            self.oneMonthAvgWrite = (oneMonthAvg * writeSpeeds['1_month'].factor) / writeSpeeds[
             '1_month'].count / self.byteConversion
 
     def getReadSpeed(self):
@@ -148,27 +157,36 @@ class Tor(object):
         oneMonthAvg = 0
 
         # Three Days
-        for value in readSpeeds['3_days'].values:
-            value = 0.0 if str(value) == "None" else value
-            threeDayAvg += value
-        # avg speed by adding all values, multiplying by the factor and dividing by count
-        self.threeDayAvgRead = (threeDayAvg * readSpeeds['3_days'].factor) / readSpeeds[
+        if '3_days' not in readSpeeds:
+            self.threeDayAvgRead = 0.0
+        else:
+            for value in readSpeeds['3_days'].values:
+                value = 0.0 if str(value) == "None" else value
+                threeDayAvg += value
+            # avg speed by adding all values, multiplying by the factor and dividing by count
+            self.threeDayAvgRead = (threeDayAvg * readSpeeds['3_days'].factor) / readSpeeds[
             '3_days'].count / self.byteConversion
 
         # One Week
-        for value in readSpeeds['1_week'].values:
-            value = 0.0 if str(value) == "None" else value
-            oneWeekAvg += value
-        # avg speed by adding all values, multiplying by the factor and dividing by count
-        self.oneWeekAvgRead = (oneWeekAvg * readSpeeds['1_week'].factor) / readSpeeds[
+        if '1_week' not in readSpeeds:
+            self.oneWeekAvgRead = 0.0
+        else:
+            for value in readSpeeds['1_week'].values:
+                value = 0.0 if str(value) == "None" else value
+                oneWeekAvg += value
+            # avg speed by adding all values, multiplying by the factor and dividing by count
+            self.oneWeekAvgRead = (oneWeekAvg * readSpeeds['1_week'].factor) / readSpeeds[
             '1_week'].count / self.byteConversion
 
         # One Month
-        for value in readSpeeds['1_month'].values:
-            value = 0.0 if str(value) == "None" else value
-            oneMonthAvg += value
-        # avg speed by adding all values, multiplying by the factor and dividing by count
-        self.oneMonthAvgRead = (oneMonthAvg * readSpeeds['1_month'].factor) / readSpeeds[
+        if '1_month' not in readSpeeds:
+            self.oneMonthAvgRead = 0.0
+        else:
+            for value in readSpeeds['1_month'].values:
+                value = 0.0 if str(value) == "None" else value
+                oneMonthAvg += value
+            # avg speed by adding all values, multiplying by the factor and dividing by count
+            self.oneMonthAvgRead = (oneMonthAvg * readSpeeds['1_month'].factor) / readSpeeds[
             '1_month'].count / self.byteConversion
 
     def lastUpdated(self):
